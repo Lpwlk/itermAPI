@@ -101,7 +101,6 @@ async def main(connection):
                             if args.clearcontent: await session.async_send_text('cl\n')
             else: 
                 status.update(f'[green]Timeout set to 0 : commands running indefinitely[/green]')
-
         else:
             console.log('Manual Iterm2 window launch required', style = 'italic red')
             
