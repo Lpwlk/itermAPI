@@ -1,7 +1,7 @@
 import argparse
 import datetime
 import threading
-import os
+import os, time
 from rich.console import Console
 from rich.rule import Rule
 from rich.live import Live
@@ -23,17 +23,17 @@ def dynamic_delay(delay: datetime.timedelta) -> str:
     return result
 
 def richtail_header() -> None:
-    os.system('cl\n')
+    os.system('clear && printf "\e[3J"')
     f.seek(0)
     console.print(Rule('📁 Rich file monitoring tool'))
     
 def richtail_footer() -> None:
     fname = os.path.basename(args.filepath)
     t_start = datetime.datetime.now()
-    footer = Rule(f'Tailing since {dynamic_delay(datetime.datetime.now()-t_start)} | currently {os.stat(args.filepath).st_size} bytes displayed')
-    with Live(footer, console = console, refresh_per_second=20):
+    footer = Rule(f'Tailing since {str(datetime.datetime.now()-t_start)[:-4]} | currently {os.stat(args.filepath).st_size} bytes displayed')
+    with Live(footer, console = console, refresh_per_second=8):
         while True:
-            footer.title = f'Tailing  time: {dynamic_delay(datetime.datetime.now()-t_start)} | Filename : [bold bright_green]{fname}[/bold bright_green] | File size : {naturalsize(os.stat(args.filepath).st_size)}'
+            footer.title = f'Tailing  time: {str(datetime.datetime.now()-t_start)[:-4]} | Filename : [bold bright_green]{fname}[/bold bright_green] | File size : {naturalsize(os.stat(args.filepath).st_size)}'
 
 parser = argparse.ArgumentParser(
     formatter_class = argparse.RawDescriptionHelpFormatter,
@@ -57,6 +57,7 @@ with open(args.filepath, 'r') as f:
                 console.print(line.strip())
             elif os.stat(args.filepath).st_size == 0:
                 richtail_header()
+                time.sleep(.1)
                 
     except KeyboardInterrupt:
         # console.print(f'Trailing interrupted, killing current process to exit', style = 'bold red')
