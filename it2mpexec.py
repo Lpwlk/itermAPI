@@ -18,7 +18,7 @@ console = Console(
 
 progress = Progress(
     SpinnerColumn(),
-    TextColumn("{task.description}"),
+    TextColumn('{task.description}'),
     # BarColumn(style = 'cornflower_blue', complete_style = 'white', pulse_style = 'white'), 
     BarColumn(),
     TaskProgressColumn(),
@@ -37,8 +37,8 @@ def sleep(delay) -> None:
 def switch_scope(
         outlogmsg: str = 'Scope output log text',
         newstatus: str = 'Scope input status text',
-        console = console,
-        status = status,
+        console: Console = console,
+        status: Status = status,
         error_status: bool = False,
         delay: float = 1,
         ) -> None:
@@ -49,12 +49,12 @@ def switch_scope(
         newstatus = f'[red]{newstatus}'
         status.spinner_style = 'red'
     status.update(newstatus)
-    console.log(newstatus, style = 'blink')
+    console.log(newstatus)
     sleep(delay)
 
 def check_ext_term() -> bool:
-    os.system("echo $TERM_PROGRAM >> term"); 
-    with open("term", 'r') as f: term = f.read().strip()
+    os.system('echo $TERM_PROGRAM >> term'); 
+    with open('term', 'r') as f: term = f.read().strip()
     os.system('rm term')
     if term == 'vscode': return True
     else: return False
@@ -62,14 +62,12 @@ def check_ext_term() -> bool:
 ########################## 
 
 os.system(clear_cmd)
-console.print('\n'*20)
+console.print('\n'*32)
 
 parser = argparse.ArgumentParser(
+    description = '''│ Debugging tool for multi-process autoexec based\n| on the Iterm2 (MacOS) Python3 API''',
     formatter_class = argparse.RawDescriptionHelpFormatter,
     epilog = 'Author : Pawlicki Loïc\n' + '─'*22 + '\n',
-    description = '''
-│ Debugging tool for multi-process autoexec based
-| on the Iterm2 (MacOS) Python3 API''',
 )
 parser.add_argument('-t', '--timeout', default = 5, metavar = '\b', type = int, action= 'store', help = 'Timeout for processes auto-interruption')
 parser.add_argument('-s', '--timescale', default = .1, metavar = '\b', type = float, action= 'store', help = 'Time scale for sequence execution')
@@ -77,6 +75,7 @@ parser.add_argument('-c', '--clcontent', action= 'store_true', help = 'Clearing 
 parser.add_argument('-d', '--delpanes', action= 'store_true', help = 'Deleting sessions after sequence execution ([-c] override)')
 parser.add_argument('-a', '--argsdisplay', action= 'store_false', help = 'Arguments display flag')
 args = parser.parse_args()
+
 if args.argsdisplay:
     console.print(Rule('[green]Parsing autoexec arguments ...'))
     for arg in vars(args): console.print(arg, '\t─\t', getattr(args, arg))
@@ -90,9 +89,12 @@ async def main(connection):
             console = console, 
             transient = True,
         ) as live:
-        inspect(live, methods = 1, help = 1)
+        
         maintask_id = progress.add_task('Iterm2 API call sequence', total = None)
         
+        # inspect(live, methods = 1, help = 1)
+        # inspect(progress.tasks[maintask_id], methods = 1, help = 1)
+
         switch_scope(
             outlogmsg='Iterm2 API calls sequence started',
             newstatus='Killing active python processes ...',
@@ -102,10 +104,9 @@ async def main(connection):
         killed_processes = 0
         for proc in psutil.process_iter():
             if proc.name() == 'Python' and proc.pid != os.getpid():
-            # if proc.name() == 'Python' and proc.pid != os.getpid() and os.path.basename(proc.cmdline()[1]) != 'lsp_server.py':
-                console.log(f'Process [yellow]{os.path.basename(proc.cmdline()[1])}[/yellow] killed using pid: {proc.pid} | cpu usage: {str(proc.cpu_percent(interval = .1)).ljust(5, ' ')}')
-                killed_processes += 1
                 if proc.cmdline()[1] != 'pyoverview.py':
+                    console.log(f'Process [yellow]{os.path.basename(proc.cmdline()[1])}[/yellow] killed using pid: {proc.pid} | cpu usage: {str(proc.cpu_percent(interval = .1)).ljust(5, ' ')}')
+                    killed_processes += 1
                     proc.kill()
                     
         if not killed_processes: 

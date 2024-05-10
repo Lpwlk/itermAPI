@@ -46,8 +46,7 @@ with open(args.filepath, 'r') as f:
             elif os.stat(args.filepath).st_size == 0:
                 richtail_header()
             else:
-                time.sleep(.5)
-                
+                time.sleep(.1)                
     except KeyboardInterrupt:
         # console.print(f'Trailing interrupted, killing current process to exit', style = 'bold red')
         os.system('kill %d' % os.getpid())
