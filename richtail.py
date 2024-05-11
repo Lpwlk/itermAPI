@@ -1,11 +1,9 @@
 import argparse
-import datetime
 import threading
 import os, time
 from rich.console import Console
-from rich.rule import Rule
 from rich.live import Live
-from rich.status import Spinner
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from humanize import naturalsize
 
 console = Console()
@@ -13,16 +11,23 @@ console = Console()
 def richtail_header() -> None:
     os.system('clear && printf "\\e[3J"\n')
     f.seek(0)
-    console.print(Rule('📁 Rich file monitoring tool'))
+    console.rule('📁 Rich file monitoring tool', style = 'green')
     
 def richtail_footer() -> None:
     fname = os.path.basename(args.filepath)
-    t_start = datetime.datetime.now()
-    footer = Rule(f'Tailing since {str(datetime.datetime.now()-t_start)[:-4]} | currently {os.stat(args.filepath).st_size} bytes displayed')
-    with Live(footer, console = console, refresh_per_second=20) as live_footer:
+    footer = Progress(
+        SpinnerColumn(speed = 3/2), 
+        TimeElapsedColumn(), 
+        TextColumn('{task.description}'), 
+        BarColumn(pulse_style='#94CA64'), 
+        console = console
+    )
+    with Live(footer, console = console, refresh_per_second=10):
+        footer_task = footer.add_task('', total = None)
         while True:
             time.sleep(.1)
-            live_footer.update(Rule(f'Tailing since {str(datetime.datetime.now()-t_start)[:-4]} | currently {os.stat(args.filepath).st_size} bytes displayed'))
+            footer.update(footer_task, description = f'Trailing [green]{fname}[/green] | File size - {naturalsize(os.stat(args.filepath).st_size)}')
+            
 parser = argparse.ArgumentParser(
     formatter_class = argparse.RawDescriptionHelpFormatter,
     description = '''│ Monitoring tool for file content tracking with rich package implementation.
@@ -44,10 +49,10 @@ with open(args.filepath, 'r') as f:
             if line:
                 console.print(f'{line.strip()}') 
             elif os.stat(args.filepath).st_size == 0:
+                time.sleep(.2)
                 richtail_header()
             else:
-                time.sleep(.1)                
+                time.sleep(.2)                
     except KeyboardInterrupt:
-        # console.print(f'Trailing interrupted, killing current process to exit', style = 'bold red')
-        os.system('kill %d' % os.getpid())
-                                   
+        console.print(f'Trailing interrupted, killing current process to exit', style = 'bold red')
+        os.system(f'kill {os.getpid()}')

@@ -31,8 +31,11 @@ status = Status(
     console = console,
 ) 
 
-def sleep(delay) -> None:
-    time.sleep(delay*args.timescale)
+def sleep(
+    delay: float = 1,
+    offset: float = 0,
+    ) -> None:
+    time.sleep(delay*args.timescale + offset)
 
 def switch_scope(
         outlogmsg: str = 'Scope output log text',
@@ -69,11 +72,12 @@ parser = argparse.ArgumentParser(
     formatter_class = argparse.RawDescriptionHelpFormatter,
     epilog = 'Author : Pawlicki Loïc\n' + '─'*22 + '\n',
 )
-parser.add_argument('-t', '--timeout', default = 5, metavar = '\b', type = int, action= 'store', help = 'Timeout for processes auto-interruption')
-parser.add_argument('-s', '--timescale', default = .1, metavar = '\b', type = float, action= 'store', help = 'Time scale for sequence execution')
 parser.add_argument('-c', '--clcontent', action= 'store_true', help = 'Clearing sessions after sequence execution')
 parser.add_argument('-d', '--delpanes', action= 'store_true', help = 'Deleting sessions after sequence execution ([-c] override)')
+parser.add_argument('-m', '--monitor', action= 'store_true', help = 'Enable to launch external monitoring tool instead of closing control session')
 parser.add_argument('-a', '--argsdisplay', action= 'store_false', help = 'Arguments display flag')
+parser.add_argument('-t', '--timeout', default = 5, metavar = 'float', type = int, action= 'store', help = 'Timeout for processes auto-interruption (float value in seconds)')
+parser.add_argument('-s', '--timescale', default = .1, metavar = 'float', type = float, action= 'store', help = 'Time scale for sequence execution (float value in seconds)')
 args = parser.parse_args()
 
 if args.argsdisplay:
@@ -98,7 +102,6 @@ async def main(connection):
         switch_scope(
             outlogmsg='Iterm2 API calls sequence started',
             newstatus='Killing active python processes ...',
-            delay = .5
         )
         
         killed_processes = 0
@@ -111,13 +114,12 @@ async def main(connection):
                     
         if not killed_processes: 
             logmsg = 'No active python process to kill for autoexec sequence'
-            sleep(1)
+            sleep()
         else: 
             logmsg = f'Killed {killed_processes} python processes for autoexec sequence init'
         switch_scope(
             outlogmsg=logmsg,
             newstatus='Fetching iterm2.app connection ...',
-            delay = 1,
         )
         
         app = await iterm2.async_get_app(connection)
@@ -127,7 +129,6 @@ async def main(connection):
             switch_scope(
                 outlogmsg='Iterm2 connection succesfully acquired',
                 newstatus='Accessing control session ...',
-                delay = 1,
             )
             
             tab = window.current_tab
@@ -136,7 +137,6 @@ async def main(connection):
             switch_scope(
                 outlogmsg='Accessed control session into acquired window for grid creation',
                 newstatus='Creating sessions grid for commands execution ...',
-                delay = 1,
             )
             
             for session in tab.sessions:
@@ -145,48 +145,26 @@ async def main(connection):
                     await session.async_close()
 
             top_left_pan = await control_session.async_split_pane(vertical=False)
-            console.log(f'Created top left session  → {top_left_pan}', style = 'yellow'); sleep(.1)
+            console.log(f'Created top left session  → {top_left_pan}', style = 'yellow'); sleep(.2)
             top_right_pan = await top_left_pan.async_split_pane(vertical=True)
-            console.log(f'Created top right session → {top_right_pan}', style = 'yellow'); sleep(.1)
+            console.log(f'Created top right session → {top_right_pan}', style = 'yellow'); sleep(.2)
             btm_left_pan = await top_left_pan.async_split_pane(vertical=False)
-            console.log(f'Created btm left session  → {btm_left_pan}', style = 'yellow'); sleep(.1)
+            console.log(f'Created btm left session  → {btm_left_pan}', style = 'yellow'); sleep(.2)
             btm_right_pan = await top_right_pan.async_split_pane(vertical=False)
-            console.log(f'Created btm right session → {btm_right_pan}', style = 'yellow'); sleep(.1)
+            console.log(f'Created btm right session → {btm_right_pan}', style = 'yellow'); sleep(.2)
             
             switch_scope(
                 outlogmsg = 'Created 2x2 grid for each exec commands',
                 newstatus = 'Managing control session depending on terminal ...',
-                delay = 1
             )
             
-            if 0: # toggle to enable 2x4 grid
-                top_left_pan2 = await control_session.async_split_pane(vertical=False)
-                console.log(f'Created top left session 2  → {top_left_pan2}', style = 'yellow'); sleep(.1)
-                top_right_pan2 = await top_left_pan2.async_split_pane(vertical=True)
-                console.log(f'Created top right session 2 → {top_right_pan2}', style = 'yellow'); sleep(.1)
-                btm_left_pan2 = await top_left_pan2.async_split_pane(vertical=False)
-                console.log(f'Created btm left session 2  → {btm_left_pan2}', style = 'yellow'); sleep(.1)
-                btm_right_pan2 = await top_right_pan2.async_split_pane(vertical=False)
-                console.log(f'Created btm right session 2 → {btm_right_pan2}', style = 'yellow'); sleep(.1)
-                
-                cmd_top_left2 = 'cdp; py /Users/loicpwlk/Documents/Code/itermAPI/richtail.py -f richsockets/Client/DataBase/Logs/log_client_1.log\n'
-                cmd_top_right2 = 'cdp; py /Users/loicpwlk/Documents/Code/itermAPI/richtail.py -f richsockets/Client/DataBase/Logs/log_client_1.log\n'
-                cmd_btm_left2 = 'cdp; py /Users/loicpwlk/Documents/Code/itermAPI/richtail.py -f richsockets/Server/DataBase/Logs/log_server.log\n'
-                cmd_btm_right2 = 'cdp; py /Users/loicpwlk/Documents/Code/itermAPI/richtail.py -f richsockets/Client/DataBase/Logs/log_client_1.log\n'
-
-                await top_left_pan2.async_send_text (cmd_top_left2)
-                console.log(f'Sent cmd_top_left2  → {cmd_top_left2[:-1]}', style = 'yellow'); sleep(.2)
-                await top_right_pan2.async_send_text(cmd_top_right2)
-                console.log(f'Sent cmd_top_right2 → {cmd_top_right2[:-1]}', style = 'yellow'); sleep(.2)
-                await btm_left_pan2.async_send_text (cmd_btm_left2)
-                console.log(f'Sent cmd_btm_left2  → {cmd_btm_left2[:-1]}', style = 'yellow'); sleep(.2)
-                await btm_right_pan2.async_send_text(cmd_btm_right2)
-                console.log(f'Sent cmd_btm_right2 → {cmd_btm_right2[:-1]}', style = 'yellow'); sleep(.2)
-            
             if check_ext_term():
-                await control_session.async_send_text(clear_cmd)
-                await control_session.async_close()
-                # await control_session.async_send_text(f'{clear_cmd}cdi; py pyoverview.py\n')
+                if args.monitor:
+                    await control_session.async_send_text('cdi; py pyoverview.py\n')
+                else:
+                    await control_session.async_send_text(clear_cmd)
+                    await control_session.async_close()
+                
                 logmsg = 'Running from vscode, control session closed → full window autoexec'
             else:
                 logmsg = 'Running from iterm2 window →  holding current exec session'
@@ -194,11 +172,10 @@ async def main(connection):
             switch_scope(
                 outlogmsg = logmsg,
                 newstatus = 'Sending commands to sessions ...',
-                delay = .5
             )
 
             cmd_top_left = 'cdp; cl; py server.py\n'
-            cmd_top_right = 'cdp; cl; py client.py\n'
+            cmd_top_right = 'cdp; sleep .01; cl; py client.py\n'
             cmd_btm_left = 'cdp; py /Users/loicpwlk/Documents/Code/itermAPI/richtail.py -f richsockets/Server/DataBase/Logs/log_server.log\n'
             cmd_btm_right = 'cdp; py /Users/loicpwlk/Documents/Code/itermAPI/richtail.py -f richsockets/Client/DataBase/Logs/log_client_1.log\n'
             
@@ -218,7 +195,6 @@ async def main(connection):
                 switch_scope(
                     outlogmsg = logmsg + f', starting {args.timeout} seconds timeout',
                     newstatus = f'Waiting {args.timeout} seconds before sessions interruption ...',
-                    delay = 1
                 )
             
                 timeout_id = progress.add_task('Timeout before interruption', total = args.timeout)
@@ -235,7 +211,6 @@ async def main(connection):
                 switch_scope(
                     outlogmsg = logmsg,
                     newstatus = 'Managing sessions before closing ...',
-                    delay = 1
                 )
                 for session in tab.sessions:
                     if session != control_session:
@@ -256,7 +231,6 @@ async def main(connection):
                 switch_scope(
                     outlogmsg = 'Sessions remote interruption ' + logmsg,
                     newstatus = f'Now exiting from iterm2 API calls sequence ...',
-                    delay = 1
                 )
             
             else: 
@@ -264,20 +238,18 @@ async def main(connection):
                 switch_scope(
                     outlogmsg = logmsg + ' using no timeout',
                     newstatus = f'Timeout set to 0 : sessions now waiting for remote interrupt ...',
-                    delay = 1
                 )
                 
                 run_flag = True
                 while run_flag:
                     try:
-                        sleep(100)
+                        sleep(offset = 100)
                     except KeyboardInterrupt:
                         run_flag = False
                         
                         switch_scope(
                             outlogmsg = 'Interruption received, exiting idle mode',
                             newstatus = 'Managing sessions after interruption ...',
-                            delay = 1
                         )
                         for session in tab.sessions:
                             if session != control_session:
@@ -293,12 +265,15 @@ async def main(connection):
                                             logmsg = 'and cleared from output content'
                                 else:
                                     if check_ext_term() and args.clcontent: await session.async_send_text(clear_cmd)
-                                    
+                            else:
+                                if check_ext_term() and args.monitor:
+                                    for proc in psutil.process_iter():
+                                        if proc.name() == 'Python' and proc.cmdline()[1] == 'pyoverview.py':
+                                            proc.kill()
                         progress.update(maintask_id, visible = False)
                         switch_scope(
                             outlogmsg = 'Sessions remotely interrupted ' + logmsg,
                             newstatus = f'Now exiting from iterm2 API calls sequence ...',
-                            delay = 1
                         )
         
         else:
@@ -307,7 +282,6 @@ async def main(connection):
                 outlogmsg = '[red][underline]Warning:[/underline] Failed to acces iterm2 window connection : manual open required[/red]',
                 newstatus = f'Program exiting because no connection could be acquired ...',
                 error_status = True,
-                delay = 1
             )
 
 iterm2.run_until_complete(main)
